@@ -1,3 +1,4 @@
+from email import message_from_string
 import os
 from typing import Tuple
 
@@ -32,7 +33,8 @@ class AESEncryption:
         #
         cipher = AES.new(self.key, AES.MODE_CBC)
         #
-        m = cipher.encrypt(pad(message, 16))
+        #m = cipher.encrypt(pad(message, 16))
+        m = cipher.encrypt(pad(message, AES.block_size))
         #
         #print(type(cipher.iv))
         bytes = m + cipher.iv
@@ -47,8 +49,8 @@ class AESEncryption:
     def decrypt(self, message: bytes) -> bytes:
         """Decrypts the given message using AES."""
         # the iv of cbc is 16 bytes long
-        m = message[ : -16]
-        iv = message[-16 : ]
+        m = message[ : -AES.block_size]
+        iv = message[-AES.block_size : ]
         #
         #print("de", m)
         #
@@ -96,7 +98,6 @@ class RSAEncryption:
         else:
             f.write(self.key.export_key(passphrase=passphrase,
                 pkcs=8, protection="scryptAndAES128-CBC"))
-        
 
     def encrypt(self, message: bytes) -> bytes:
         """Encrypts the given message using RSA."""
@@ -122,14 +123,31 @@ class HybridEncryption:
         Encrypts the given message using a hybrid cryptosystem (AES and RSA).
         Returns the encrypted message and the encrypted symmetric key.
         """
-        pass
+        # aes
+        aes = AESEncryption.from_nbits(256)
+        # 
+        m = aes.encrypt(message)
+        #
+        aes_key = aes.key
+        #
+        k = self.rsa.encrypt(aes_key)
+        #
+        return (bytes(m), bytes(k))
+        
 
     def decrypt(self, message: bytes, message_key: bytes) -> bytes:
         """
         Encrypts the given message using a hybrid cryptosystem (AES and RSA).
         Requires the encrypted symmetric key that the message was encrypted with.
         """
-        pass
+        k = self.rsa.decrypt(message_key)
+        #
+        aes = AESEncryption(k)
+        #
+        m = aes.decrypt(message)
+        #
+        return bytes(m)
+        
 
 
 class DigitalSignature:
@@ -140,11 +158,29 @@ class DigitalSignature:
 
     def sign(self, message: bytes) -> bytes:
         """Signs the given message using RSA and SHA-256 and returns the digital signature."""
-        pass
+        #
+        s = pkcs1_15.new(self.rsa.key)
+        #
+        hash = SHA256.new(message)
+        #
+        s_hash = s.sign(hash)
+        #
+        return bytes(s_hash)
 
     def verify(self, message: bytes, signature: bytes) -> bool:
         """Verifies the digital signature of the given message using RSA and SHA-256."""
-        pass
+        #
+        s = pkcs1_15.new(self.rsa.key)
+        #
+        hash = SHA256.new(message)
+        #
+        try:
+            s_ver = s.verify(hash, signature)
+        except:
+            return False
+        return True
+        #
+
 
 
 if __name__ == "__main__":
