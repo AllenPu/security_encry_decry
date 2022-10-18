@@ -75,24 +75,40 @@ class RSAEncryption:
     @classmethod
     def from_nbits(cls, nbits: int = 2048):
         """Creates an RSA encryption object with a new key with the given number of bits."""
-        pass
+        public_key = [1024, 2048, 3072]
+        if nbits not in public_key:
+            nbits = 2048
+        keys = RSA.generate(nbits)
+        return RSAEncryption(key=keys)
 
     @classmethod
     def from_file(cls, filename: str, passphrase: str = None):
         """Creates an RSA encryption object with a key loaded from the given file."""
-        pass
+        f = open(filename, 'r')
+        keys = RSA.importKey(f.read(), passphrase=passphrase)
+        return RSAEncryption(keys)
 
     def to_file(self, filename: str, passphrase: str = None):
         """Saves this RSA encryption object's key to the given file."""
-        pass
+        f = open(filename, "wb")
+        if filename is None:
+            f.write(self.key.public_key().export_key())
+        else:
+            f.write(self.key.export_key(passphrase=passphrase,
+                pkcs=8, protection="scryptAndAES128-CBC"))
+        
 
     def encrypt(self, message: bytes) -> bytes:
         """Encrypts the given message using RSA."""
-        pass
+        cipher = PKCS1_OAEP.new(self.key)
+        m = cipher.encrypt(message)
+        return bytes(m)
 
     def decrypt(self, message: bytes) -> bytes:
         """Decrypts the given message using RSA."""
-        pass
+        cipher = PKCS1_OAEP.new(self.key)
+        m_decrypt = cipher.decrypt(message)
+        return bytes(m_decrypt)
 
 
 class HybridEncryption:
